@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5100/api',
-  // baseURL: 'https://testing.topplaced.com/api',
+  // baseURL: 'http://localhost:5100/api',
+  baseURL: 'https://testing.topplaced.com/api',
   headers: {
     'Accept': 'application/json',
   },

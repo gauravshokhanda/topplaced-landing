@@ -1,3 +1,8 @@
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import api from "@/utils/api";
@@ -10,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
+
 import {
   CalendarClock,
   Clock,
@@ -24,7 +30,18 @@ import {
   Presentation,
   Award,
 } from "lucide-react";
+
 import Link from "next/link";
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export default function WorkshopDetail() {
   const router = useRouter();
@@ -35,10 +52,10 @@ export default function WorkshopDetail() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-
     api
       .get(`/workshops/${id}`)
       .then((res) => {
@@ -83,18 +100,85 @@ export default function WorkshopDetail() {
       });
   }, [id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Registration submitted:", {
-      name,
-      email,
-      phone,
-      workshopId: id,
-    });
-    toast.success("Registration successful! Check your email for details.");
-    setName("");
-    setEmail("");
-    setPhone("");
+    if (!name || !email || !phone) {
+      toast.error("All fields are required.");
+      return;
+    }
+
+    // Clean numeric value from workshop.price
+    const numericPrice = parseFloat(workshop.price.replace(/[^\d.]/g, ""));
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      toast.error("Invalid payment amount selected.");
+      return;
+    }
+
+    try {
+      const { data } = await api.post("/workshops/register", {
+        fullName: name,
+        email,
+        whatsapp: phone,
+        workshopId: id,
+        payment: numericPrice,
+      });
+
+      const { order, participantInfo } = data;
+
+      const isScriptLoaded = await loadRazorpayScript();
+      if (!isScriptLoaded) {
+        toast.error("Failed to load Razorpay script");
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "TopPlaced Workshop",
+        description: `Workshop Registration - ${workshop.title}`,
+        order_id: order.id,
+        handler: async (response: any) => {
+          try {
+            await api.post("/workshops/confirm-registration", {
+              ...participantInfo,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            toast.success("Payment successful! You're registered.");
+            setName("");
+            setEmail("");
+            setPhone("");
+          } catch (err) {
+            console.error(err);
+            toast.error("Payment succeeded but registration failed.");
+          } finally {
+            setIsPaying(false);
+          }
+        },
+        prefill: {
+          name: participantInfo.fullName,
+          email: participantInfo.email,
+          contact: participantInfo.whatsapp,
+        },
+        theme: { color: "#0f6861" },
+        modal: {
+          ondismiss: () => {
+            setIsPaying(false); // stop loading if user cancels manually
+            toast.info("Payment popup closed.");
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      setIsPaying(true);
+      razorpay.open();
+      razorpay.on("payment.failed", () => setIsPaying(false));
+    } catch (err: any) {
+      console.error("Registration failed:", err);
+      toast.error(err.response?.data?.message || "Registration failed.");
+    }
   };
 
   if (loading) {
@@ -295,6 +379,15 @@ export default function WorkshopDetail() {
           </Tabs>
         </div>
       </section>
+      {isPaying && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white px-6 py-4 rounded-xl shadow-md text-center">
+            <p className="text-lg font-semibold text-gray-800">
+              Processing payment...
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Registration */}
       <section id="register" className="py-16 bg-gray-50">

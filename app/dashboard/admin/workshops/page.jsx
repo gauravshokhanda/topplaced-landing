@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Button,
   IconButton,
@@ -10,12 +10,12 @@ import {
   DialogContent,
   DialogActions,
   Typography,
-} from '@mui/material';
-import { Edit, Delete } from '@mui/icons-material';
-import DynamicTable from '../../../../components/DynamicTable';
-import WorkshopForm from '../../../../components/WorkshopForm';
-import ParticipantForm from '../../../../components/ParticipantForm';
-import {api} from "../../../config/apiConfig"
+} from "@mui/material";
+import { Edit, Delete } from "@mui/icons-material";
+import DynamicTable from "../../../../components/DynamicTable";
+import WorkshopForm from "../../../../components/WorkshopForm";
+import ParticipantForm from "../../../../components/ParticipantForm";
+import api from "@/utils/api";
 
 const WorkshopModule = () => {
   // Workshop states
@@ -44,7 +44,7 @@ const WorkshopModule = () => {
   const fetchWorkshops = async () => {
     setLoadingWorkshops(true);
     try {
-      const response = await api.get('workshops');
+      const response = await api.get("workshops");
       setWorkshops(response.data);
       setTotalItemsWorkshops(response.data.length);
       setErrorWorkshops(null);
@@ -77,7 +77,7 @@ const WorkshopModule = () => {
   // Workshop CRUD
   const handleCreateWorkshop = async (formData) => {
     try {
-      await api.post('workshops', formData);
+      await api.post("workshops", formData);
       fetchWorkshops();
     } catch (err) {
       setErrorWorkshops(err.message);
@@ -94,7 +94,7 @@ const WorkshopModule = () => {
   };
 
   const handleDeleteWorkshop = async (workshopId) => {
-    if (confirm('Are you sure you want to delete this workshop?')) {
+    if (confirm("Are you sure you want to delete this workshop?")) {
       try {
         await api.delete(`workshops/${workshopId}`);
         fetchWorkshops();
@@ -107,7 +107,7 @@ const WorkshopModule = () => {
   // Participant CRUD
   const handleRegisterParticipant = async (formData) => {
     try {
-      await api.post('workshops/register', {
+      await api.post("workshops/register", {
         workshopId: currentWorkshopId,
         ...formData,
       });
@@ -132,7 +132,7 @@ const WorkshopModule = () => {
   };
 
   const handleDeleteParticipant = async (participantId) => {
-    if (confirm('Are you sure you want to delete this participant?')) {
+    if (confirm("Are you sure you want to delete this participant?")) {
       try {
         await api.delete(
           `workshops/${currentWorkshopId}/participants/${participantId}`
@@ -167,14 +167,18 @@ const WorkshopModule = () => {
 
   // Workshop table columns
   const workshopColumns = [
-    { id: 'workshopName', label: 'Workshop Name' },
-    { id: 'dateTime', label: 'Date & Time', render: (row) => new Date(row.dateTime).toLocaleString() },
-    { id: 'meetingLink', label: 'Meeting Link' },
-    { id: 'price', label: 'Price' },
-    { id: 'totalRegistered', label: 'Total Registered' },
+    { id: "workshopName", label: "Workshop Name" },
     {
-      id: 'actions',
-      label: 'Actions',
+      id: "dateTime",
+      label: "Date & Time",
+      render: (row) => new Date(row.dateTime).toLocaleString(),
+    },
+    { id: "meetingLink", label: "Meeting Link" },
+    { id: "price", label: "Price" },
+    { id: "totalRegistered", label: "Total Registered" },
+    {
+      id: "actions",
+      label: "Actions",
       render: (row) => (
         <Box>
           <IconButton
@@ -188,14 +192,14 @@ const WorkshopModule = () => {
             <Edit />
           </IconButton>
           <IconButton
-          onClick={(event) => {
-            event.stopPropagation(); 
-            handleDeleteWorkshop(row._id);
-          }}
-          color="error"
-        >
-          <Delete />
-        </IconButton>
+            onClick={(event) => {
+              event.stopPropagation();
+              handleDeleteWorkshop(row._id);
+            }}
+            color="error"
+          >
+            <Delete />
+          </IconButton>
         </Box>
       ),
     },
@@ -203,13 +207,13 @@ const WorkshopModule = () => {
 
   // Participant table columns
   const participantColumns = [
-    { id: 'fullName', label: 'Full Name' },
-    { id: 'email', label: 'Email' },
-    { id: 'whatsapp', label: 'WhatsApp' },
-    { id: 'payment', label: 'Payment' },
+    { id: "fullName", label: "Full Name" },
+    { id: "email", label: "Email" },
+    { id: "whatsapp", label: "WhatsApp" },
+    { id: "payment", label: "Payment" },
     {
-      id: 'actions',
-      label: 'Actions',
+      id: "actions",
+      label: "Actions",
       render: (row) => (
         <Box>
           <IconButton
@@ -221,7 +225,10 @@ const WorkshopModule = () => {
           >
             <Edit />
           </IconButton>
-          <IconButton onClick={() => handleDeleteParticipant(row._id)} color="error">
+          <IconButton
+            onClick={() => handleDeleteParticipant(row._id)}
+            color="error"
+          >
             <Delete />
           </IconButton>
         </Box>
@@ -231,13 +238,16 @@ const WorkshopModule = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
         <Typography variant="h5" color="#106861">
           Workshop Management
         </Typography>
         <Button
           variant="contained"
-          sx={{ backgroundColor: '#106861', '&:hover': { backgroundColor: '#0e5b54' } }}
+          sx={{
+            backgroundColor: "#106861",
+            "&:hover": { backgroundColor: "#0e5b54" },
+          }}
           onClick={() => {
             setSelectedWorkshop(null);
             setOpenWorkshopForm(true);
@@ -249,7 +259,10 @@ const WorkshopModule = () => {
 
       <DynamicTable
         columns={workshopColumns}
-        data={workshops.slice(pageWorkshops * rowsPerPageWorkshops, pageWorkshops * rowsPerPageWorkshops + rowsPerPageWorkshops)}
+        data={workshops.slice(
+          pageWorkshops * rowsPerPageWorkshops,
+          pageWorkshops * rowsPerPageWorkshops + rowsPerPageWorkshops
+        )}
         loading={loadingWorkshops}
         error={errorWorkshops}
         totalItems={totalItemsWorkshops}
@@ -268,17 +281,28 @@ const WorkshopModule = () => {
       <WorkshopForm
         open={openWorkshopForm}
         onClose={() => setOpenWorkshopForm(false)}
-        onSubmit={selectedWorkshop ? handleUpdateWorkshop : handleCreateWorkshop}
+        onSubmit={
+          selectedWorkshop ? handleUpdateWorkshop : handleCreateWorkshop
+        }
         initialData={selectedWorkshop || {}}
       />
 
       {/* Participant Table Modal */}
-      <Dialog open={openParticipantModal} onClose={() => setOpenParticipantModal(false)} maxWidth="lg" fullWidth>
+      <Dialog
+        open={openParticipantModal}
+        onClose={() => setOpenParticipantModal(false)}
+        maxWidth="lg"
+        fullWidth
+      >
         <DialogTitle>
           Participants for Workshop
           <Button
             variant="contained"
-            sx={{ ml: 2, backgroundColor: '#106861', '&:hover': { backgroundColor: '#0e5b54' } }}
+            sx={{
+              ml: 2,
+              backgroundColor: "#106861",
+              "&:hover": { backgroundColor: "#0e5b54" },
+            }}
             onClick={() => {
               setSelectedParticipant(null);
               setOpenParticipantForm(true);
@@ -290,7 +314,11 @@ const WorkshopModule = () => {
         <DialogContent>
           <DynamicTable
             columns={participantColumns}
-            data={participants.slice(pageParticipants * rowsPerPageParticipants, pageParticipants * rowsPerPageParticipants + rowsPerPageParticipants)}
+            data={participants.slice(
+              pageParticipants * rowsPerPageParticipants,
+              pageParticipants * rowsPerPageParticipants +
+                rowsPerPageParticipants
+            )}
             loading={loadingParticipants}
             error={errorParticipants}
             totalItems={totalItemsParticipants}
@@ -301,7 +329,10 @@ const WorkshopModule = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenParticipantModal(false)} color="secondary">
+          <Button
+            onClick={() => setOpenParticipantModal(false)}
+            color="secondary"
+          >
             Close
           </Button>
         </DialogActions>
@@ -311,7 +342,11 @@ const WorkshopModule = () => {
       <ParticipantForm
         open={openParticipantForm}
         onClose={() => setOpenParticipantForm(false)}
-        onSubmit={selectedParticipant ? handleUpdateParticipant : handleRegisterParticipant}
+        onSubmit={
+          selectedParticipant
+            ? handleUpdateParticipant
+            : handleRegisterParticipant
+        }
         initialData={selectedParticipant || {}}
       />
     </Box>

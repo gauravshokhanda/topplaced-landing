@@ -116,9 +116,6 @@ export default function WorkshopDetail() {
       payment: Math.round(Number(workshop.price.replace("₹", "").trim())) * 100, // Convert to paise
     };
 
-    // Log the data to ensure it's correct
-    console.log("Registration Data (Payload):", registrationData);
-
     try {
       const { data } = await api.post("workshops/register", registrationData);
       const { order, participantInfo } = data;
@@ -142,14 +139,14 @@ export default function WorkshopDetail() {
 
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount, // Should be in paise
+        amount: order.amount, // Ensure it's in paise (e.g., 50000 for ₹500)
         currency: order.currency,
         name: "TopPlaced Workshop",
         description: `Payment for ₹${workshop.title}`,
         order_id: order.id,
         handler: async function (response: any) {
           try {
-            // Only register the user after payment confirmation
+            // Only register the user after successful payment
             const confirmData = {
               fullName: participantInfo.fullName,
               email: participantInfo.email,
@@ -160,14 +157,14 @@ export default function WorkshopDetail() {
               razorpay_signature: response.razorpay_signature,
             };
 
-            // Call the API only after payment success
+            // Confirm registration after payment
             await api.post("workshops/confirm-registration", confirmData);
             toast.success("Payment successful! You are registered.");
 
-            // Redirect to the Thank You page
+            // Redirect to Thank You page
             router.push("/thankyou");
 
-            // Reset form data after successful registration
+            // Reset form after successful registration
             setName("");
             setEmail("");
             setPhone("");
@@ -189,10 +186,11 @@ export default function WorkshopDetail() {
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error) {
+      // Generic error handling (non-Axios)
       console.error("Registration failed:", error);
-      toast.error(
-        error.response?.data?.message || "Registration initiation failed"
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
+      toast.error(errorMessage);
     }
   };
 

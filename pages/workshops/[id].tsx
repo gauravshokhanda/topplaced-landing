@@ -70,7 +70,7 @@ export default function WorkshopDetail() {
             "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg",
           seats: 50,
           remainingSeats: 50 - (data.totalRegistered || 0),
-          price: `$${data.price}`,
+          price: `₹${data.price}`,
           whatYouWillLearn: data.whatYoullLearn || [],
           prerequisites: ["Basic internet access", "Enthusiasm to learn"],
         });
@@ -83,18 +83,100 @@ export default function WorkshopDetail() {
       });
   }, [id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Registration submitted:", {
-      name,
+
+    if (!name || !email || !phone) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+
+    const registrationData = {
+      fullName: name,
       email,
-      phone,
+      whatsapp: phone,
       workshopId: id,
-    });
-    toast.success("Registration successful! Check your email for details.");
-    setName("");
-    setEmail("");
-    setPhone("");
+      payment: Math.round(Number(workshop.price.replace("₹", "").trim())) * 100, // Convert to paise
+    };
+
+    // Log the data to ensure it's correct
+    console.log("Registration Data (Payload):", registrationData);
+
+    try {
+      const { data } = await api.post("workshops/register", registrationData);
+      const { order, participantInfo } = data;
+
+      const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+          if (window.Razorpay) return resolve(true);
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+      };
+
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        toast.error("Failed to load Razorpay script");
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount, // Should be in paise
+        currency: order.currency,
+        name: "TopPlaced Workshop",
+        description: `Payment for ₹${workshop.title}`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          try {
+            // Only register the user after payment confirmation
+            const confirmData = {
+              fullName: participantInfo.fullName,
+              email: participantInfo.email,
+              whatsapp: participantInfo.whatsapp,
+              workshopId: participantInfo.workshopId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            };
+
+            // Call the API only after payment success
+            await api.post("workshops/confirm-registration", confirmData);
+            toast.success("Payment successful! You are registered.");
+
+            // Redirect to the Thank You page
+            router.push("/thankyou");
+
+            // Reset form data after successful registration
+            setName("");
+            setEmail("");
+            setPhone("");
+          } catch (err) {
+            console.error("Error confirming payment:", err);
+            toast.error("Payment succeeded, but registration failed.");
+          }
+        },
+        prefill: {
+          name: participantInfo.fullName,
+          email: participantInfo.email,
+          contact: participantInfo.whatsapp,
+        },
+        theme: {
+          color: "#0A6E6E",
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error("Registration failed:", error);
+      toast.error(
+        error.response?.data?.message || "Registration initiation failed"
+      );
+    }
   };
 
   if (loading) {
@@ -224,7 +306,7 @@ export default function WorkshopDetail() {
       </section>
 
       {/* Details Tabs */}
-      <section className="py-16">
+      {/* <section className="py-16">
         <div className="container px-4 md:px-6 mx-auto">
           <Tabs defaultValue="overview">
             <TabsList className="mb-8">
@@ -294,7 +376,7 @@ export default function WorkshopDetail() {
             </TabsContent>
           </Tabs>
         </div>
-      </section>
+      </section> */}
 
       {/* Registration */}
       <section id="register" className="py-16 bg-gray-50">
